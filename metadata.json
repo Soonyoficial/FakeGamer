@@ -1,0 +1,8 @@
+{
+  "name": "SoOnyGamer",
+  "description": "A high-performance mobile-first application to discover trending games, useful pro-tips, and live streaming content using Gemini AI for smart insights.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
