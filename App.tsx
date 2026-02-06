@@ -4,11 +4,12 @@ import { Layout } from './components/Layout';
 import { VideoCard } from './components/VideoCard';
 import { GameCard } from './components/GameCard';
 import { InsightModal } from './components/InsightModal';
+import { AICore } from './components/AICore';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { PiPPlayer } from './components/PiPPlayer';
 import { Game, Video, ViewType, AIInsight } from './types';
-import { getGameInsight } from './services/geminiService';
-import { Flame, Star, Zap, Play, Bookmark, Info, Search, ChevronRight, Activity, Terminal } from 'lucide-react';
+import { getGameInsight, analyzeVideoContent } from './services/geminiService';
+import { Flame, Star, Zap, Play, Bookmark, Info, Search, ChevronRight, Activity, Terminal, BrainCircuit } from 'lucide-react';
 
 const MOCK_GAMES: Game[] = [
   { 
@@ -159,6 +160,17 @@ const App: React.FC = () => {
     setIsInsightLoading(false);
   };
 
+  const handleDeepAnalysis = async (video: Video) => {
+    setIsInsightLoading(true);
+    const analysis = await analyzeVideoContent(video.title, video.summary || "");
+    setAiInsight({
+      tip: analysis || "Análisis fallido.",
+      whyTrending: "Análisis Profundo con Gemini 3 Pro",
+      difficulty: 'Hard'
+    });
+    setIsInsightLoading(false);
+  };
+
   const handlePiP = (e: React.MouseEvent, video: Video) => {
     e.stopPropagation();
     if (selectedVideo?.id === video.id) setSelectedVideo(null);
@@ -196,137 +208,108 @@ const App: React.FC = () => {
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
     >
-      <div className="px-5 py-6 min-h-full">
-        
-        {/* Trending Home Section */}
-        {activeView === 'home' && !searchQuery && (
-          <section className="mb-12 animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-outfit font-black flex items-center gap-3 text-white uppercase italic tracking-tighter">
-                <div className="p-2 bg-cyan-500 rounded text-black shadow-[0_0_15px_rgba(6,182,212,0.6)]">
-                  <Flame size={20} fill="black" />
-                </div>
-                Tendencias Globales
-              </h2>
-              <button className="text-[10px] font-black text-cyan-400 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1">
-                Data Hub <ChevronRight size={14} />
-              </button>
+      {activeView === 'neural' ? (
+        <AICore />
+      ) : (
+        <div className="px-5 py-6 min-h-full">
+          {/* Trending Home Section */}
+          {activeView === 'home' && !searchQuery && (
+            <section className="mb-12 animate-fade-in">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-outfit font-black flex items-center gap-3 text-white uppercase italic tracking-tighter">
+                  <div className="p-2 bg-cyan-500 rounded text-black shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                    <Flame size={20} fill="black" />
+                  </div>
+                  Tendencias Globales
+                </h2>
+              </div>
+              
+              <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-6 -mx-5 px-5">
+                {isDataLoading 
+                  ? Array.from({ length: 4 }).map((_, i) => <GameCard key={i} isLoading={true} />)
+                  : MOCK_GAMES.map(game => <GameCard key={game.id} game={game} />)
+                }
+              </div>
+            </section>
+          )}
+
+          {/* Live HUD Special */}
+          {activeView === 'live' && !searchQuery && (
+            <div className="mb-10 animate-fade-in">
+              <div className="flex gap-3 overflow-x-auto hide-scrollbar mb-8 -mx-5 px-5">
+                {LIVE_CATEGORIES.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setLiveCategory(cat)}
+                    className={`px-6 py-2.5 rounded border-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap italic ${
+                      liveCategory === cat 
+                      ? 'bg-cyan-500 border-cyan-400 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]' 
+                      : 'bg-zinc-950 border-zinc-900 text-zinc-600 hover:border-zinc-700'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
-            
-            <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-6 -mx-5 px-5">
+          )}
+
+          {/* Video Feed HUD */}
+          <section className="space-y-8">
+            <div className="flex items-center justify-between border-l-4 border-cyan-500 pl-4 bg-cyan-500/5 py-2 rounded-r-xl">
+              <h2 className="text-xl font-outfit font-black flex items-center gap-3 text-white uppercase italic tracking-tighter">
+                {searchQuery ? (
+                  <><Search className="text-cyan-400" size={20} /> Query: "{searchQuery}"</>
+                ) : activeView === 'live' ? (
+                  <><Zap className="text-cyan-500" size={20} fill="currentColor" /> Streams Activos</>
+                ) : activeView === 'discover' ? (
+                  <><Star className="text-cyan-400" size={20} fill="currentColor" /> Deep Learning</>
+                ) : activeView === 'saved' ? (
+                  <><Bookmark className="text-cyan-400" size={20} fill="currentColor" /> Archivo Encriptado</>
+                ) : (
+                  <><Terminal className="text-cyan-400" size={20} /> Feed de Sistema</>
+                )}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-8">
               {isDataLoading 
-                ? Array.from({ length: 4 }).map((_, i) => <GameCard key={i} isLoading={true} />)
-                : MOCK_GAMES.map(game => <GameCard key={game.id} game={game} />)
+                ? Array.from({ length: 3 }).map((_, i) => <VideoCard key={i} isLoading={true} />)
+                : filteredVideos.length > 0 ? (
+                  filteredVideos.map(video => {
+                    const videoGame = MOCK_GAMES.find(g => g.id === video.gameId);
+                    const relatedGames = MOCK_GAMES.filter(g => 
+                      videoGame && g.category === videoGame.category && g.id !== videoGame.id
+                    );
+                    
+                    return (
+                      <VideoCard 
+                        key={video.id} 
+                        video={video} 
+                        isSaved={savedVideoIds.includes(video.id)}
+                        isLiked={likedVideoIds.includes(video.id)}
+                        onToggleSave={toggleSaveVideo}
+                        onToggleLike={toggleLikeVideo}
+                        onPiP={handlePiP}
+                        onClick={handleVideoClick}
+                        onAnalyze={() => handleDeepAnalysis(video)}
+                        relatedVideos={MOCK_VIDEOS.filter(v => v.gameId === video.gameId && v.id !== video.id)}
+                        relatedGames={relatedGames}
+                      />
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
+                    <div className="w-20 h-20 bg-zinc-900 border border-cyan-500/30 rounded-full flex items-center justify-center text-cyan-500">
+                      {searchQuery ? <Search size={40} /> : activeView === 'saved' ? <Bookmark size={40} /> : <Info size={40} />}
+                    </div>
+                  </div>
+                )
               }
             </div>
           </section>
-        )}
-
-        {/* Live HUD Special */}
-        {activeView === 'live' && !searchQuery && (
-          <div className="mb-10 animate-fade-in">
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar mb-8 -mx-5 px-5">
-              {LIVE_CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setLiveCategory(cat)}
-                  className={`px-6 py-2.5 rounded border-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap italic ${
-                    liveCategory === cat 
-                    ? 'bg-cyan-500 border-cyan-400 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]' 
-                    : 'bg-zinc-950 border-zinc-900 text-zinc-600 hover:border-zinc-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            {liveCategory === 'Nexus' && (
-              isDataLoading ? (
-                 <div className="aspect-video rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center animate-pulse mb-8">
-                   <LoadingSpinner size={32} />
-                 </div>
-              ) : (
-                <div 
-                  onClick={() => handleVideoClick(MOCK_VIDEOS[3])}
-                  className="relative aspect-video rounded-2xl overflow-hidden mb-10 group cursor-pointer border border-cyan-500/20 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
-                >
-                  <img src={MOCK_VIDEOS[3].thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-1000" alt="Featured Live" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent"></div>
-                  <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 px-3 py-1.5 rounded-md shadow-[0_0_15px_rgba(220,38,38,0.6)] border border-white/20">
-                    <Activity size={12} className="text-white animate-pulse" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest italic">Prioridad Alta</span>
-                  </div>
-                  <div className="absolute bottom-6 left-6 right-6">
-                     <h3 className="text-xl font-outfit font-black text-white mb-2 line-clamp-1 italic uppercase tracking-tighter group-hover:text-cyan-400 transition-colors">{MOCK_VIDEOS[3].title}</h3>
-                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                           <div className="w-8 h-8 rounded border border-cyan-500/50 flex items-center justify-center text-cyan-400 font-black text-xs">R</div>
-                           <span className="text-xs text-zinc-300 font-bold uppercase tracking-wider">{MOCK_VIDEOS[3].author}</span>
-                        </div>
-                        <span className="text-[10px] text-cyan-400 font-black ml-auto flex items-center gap-1.5 bg-black/80 border border-cyan-500/30 px-3 py-1.5 rounded uppercase italic">
-                          <Zap size={12} className="text-cyan-400 fill-cyan-400 shadow-[0_0_10px_cyan]" /> 150K Activos
-                        </span>
-                     </div>
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        )}
-
-        {/* Video Feed HUD */}
-        <section className="space-y-8">
-          <div className="flex items-center justify-between border-l-4 border-cyan-500 pl-4 bg-cyan-500/5 py-2 rounded-r-xl">
-            <h2 className="text-xl font-outfit font-black flex items-center gap-3 text-white uppercase italic tracking-tighter">
-              {searchQuery ? (
-                <><Search className="text-cyan-400" size={20} /> Query: "{searchQuery}"</>
-              ) : activeView === 'live' ? (
-                <><Zap className="text-cyan-500" size={20} fill="currentColor" /> Streams Activos</>
-              ) : activeView === 'discover' ? (
-                <><Star className="text-cyan-400" size={20} fill="currentColor" /> Deep Learning</>
-              ) : activeView === 'saved' ? (
-                <><Bookmark className="text-cyan-400" size={20} fill="currentColor" /> Archivo Encriptado</>
-              ) : (
-                <><Terminal className="text-cyan-400" size={20} /> Feed de Sistema</>
-              )}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-8">
-            {isDataLoading 
-              ? Array.from({ length: 3 }).map((_, i) => <VideoCard key={i} isLoading={true} />)
-              : filteredVideos.length > 0 ? (
-                filteredVideos.map(video => (
-                  <VideoCard 
-                    key={video.id} 
-                    video={video} 
-                    isSaved={savedVideoIds.includes(video.id)}
-                    isLiked={likedVideoIds.includes(video.id)}
-                    onToggleSave={toggleSaveVideo}
-                    onToggleLike={toggleLikeVideo}
-                    onPiP={handlePiP}
-                    onClick={handleVideoClick}
-                    relatedVideos={MOCK_VIDEOS.filter(v => v.gameId === video.gameId && v.id !== video.id)}
-                  />
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
-                  <div className="w-20 h-20 bg-zinc-900 border border-cyan-500/30 rounded-full flex items-center justify-center text-cyan-500 shadow-[0_0_30px_rgba(0,242,255,0.1)]">
-                    {searchQuery ? <Search size={40} /> : activeView === 'saved' ? <Bookmark size={40} /> : <Info size={40} />}
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-white font-black uppercase italic tracking-widest text-lg">Error de Datos</p>
-                    <p className="text-zinc-500 text-xs px-12 font-bold leading-relaxed">
-                      {searchQuery ? 'Sin coincidencias en la base de datos central.' : activeView === 'saved' ? 'Tu archivo está vacío. Sincroniza nuevo contenido.' : 'Protocolo de feed sin datos activos.'}
-                    </p>
-                  </div>
-                </div>
-              )
-            }
-          </div>
-        </section>
-      </div>
+        </div>
+      )}
 
       {/* User Terminal View */}
       {activeView === 'profile' && !isDataLoading && (
@@ -335,40 +318,12 @@ const App: React.FC = () => {
           <div className="relative">
              <div className="w-28 h-28 bg-black border-4 border-cyan-500 rounded-2xl mb-6 flex items-center justify-center text-5xl font-outfit font-black text-cyan-400 shadow-[0_0_30px_rgba(0,242,255,0.4)] relative overflow-hidden group">
                JD
-               <div className="absolute inset-0 bg-cyan-500/10 animate-pulse"></div>
              </div>
-             <div className="absolute -bottom-2 -right-2 bg-green-500 w-6 h-6 rounded-full border-4 border-black animate-pulse"></div>
           </div>
           <h2 className="text-3xl font-outfit font-black text-white italic uppercase tracking-tighter">John_Doe.exe</h2>
-          <p className="text-cyan-500/80 text-xs font-black uppercase tracking-[0.3em] mb-10">Elite Operator Rank</p>
-          
-          <div className="grid grid-cols-3 gap-1 w-full mb-12 bg-zinc-900/50 p-1 rounded-2xl border border-zinc-800">
-            <div className="py-4 rounded-xl hover:bg-zinc-800 transition-colors">
-              <p className="text-2xl font-black text-white italic">{savedVideoIds.length}</p>
-              <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Logs</p>
-            </div>
-            <div className="py-4 border-x border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors">
-              <p className="text-2xl font-black text-white italic">8.5K</p>
-              <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Alies</p>
-            </div>
-            <div className="py-4 rounded-xl hover:bg-zinc-800 transition-colors">
-              <p className="text-2xl font-black text-white italic">2.1K</p>
-              <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">XP</p>
-            </div>
-          </div>
-          
-          <div className="w-full space-y-4">
-             <button 
-              onClick={() => setActiveView('saved')}
-              className="w-full bg-cyan-500 text-black font-black py-5 rounded-xl flex items-center justify-center gap-3 transition-all hover:shadow-[0_0_25px_rgba(0,242,255,0.6)] active:scale-[0.97] uppercase italic tracking-widest"
-             >
-               <Bookmark size={20} fill="black" /> Acceder a mis Archivos
-             </button>
-             <button className="w-full bg-zinc-900 border border-zinc-800 text-white font-black py-5 rounded-xl flex items-center justify-center gap-3 hover:border-cyan-500/50 uppercase italic tracking-widest">
-               Protocolo Historial
-             </button>
-             <button className="w-full border-2 border-red-600/30 text-red-500 font-black py-5 rounded-xl mt-10 uppercase italic tracking-widest hover:bg-red-600 hover:text-white transition-all">
-               Desconectar
+          <div className="w-full space-y-4 mt-10">
+             <button onClick={() => setActiveView('neural')} className="w-full bg-cyan-500 text-black font-black py-5 rounded-xl flex items-center justify-center gap-3 uppercase italic tracking-widest shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all active:scale-95">
+               <BrainCircuit size={20} fill="black" /> Acceder al Núcleo Neuronal
              </button>
           </div>
         </div>

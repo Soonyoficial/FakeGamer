@@ -20,10 +20,17 @@ export interface Video {
   summary?: string;
 }
 
-export type ViewType = 'home' | 'live' | 'discover' | 'saved' | 'profile';
+export type ViewType = 'home' | 'live' | 'discover' | 'saved' | 'profile' | 'neural';
 
 export interface AIInsight {
   tip: string;
   whyTrending: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
+}
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+  thinking?: string;
+  sources?: { title: string; uri: string }[];
 }

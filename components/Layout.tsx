@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Home, PlayCircle, Compass, User, Bell, Search, Bookmark, X, Cpu } from 'lucide-react';
+import { Home, PlayCircle, Compass, User, Bell, Search, Bookmark, X, Cpu, BrainCircuit } from 'lucide-react';
 import { ViewType } from '../types';
 
 interface LayoutProps {
@@ -88,34 +88,34 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveV
       </main>
 
       {/* Bottom Navigation - HUD Overlay */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass border-t border-cyan-500/20 px-4 py-4 flex justify-between items-center z-50 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass border-t border-cyan-500/20 px-2 py-4 flex justify-between items-center z-50 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
         <NavButton 
-          icon={<Home size={22} />} 
+          icon={<Home size={20} />} 
           label="Nexus" 
           active={activeView === 'home'} 
           onClick={() => setActiveView('home')} 
         />
         <NavButton 
-          icon={<PlayCircle size={22} />} 
+          icon={<PlayCircle size={20} />} 
           label="Live" 
           active={activeView === 'live'} 
           isLiveTab={true}
           onClick={() => setActiveView('live')} 
         />
         <NavButton 
-          icon={<Compass size={22} />} 
-          label="Explorar" 
-          active={activeView === 'discover'} 
-          onClick={() => setActiveView('discover')} 
+          icon={<BrainCircuit size={20} />} 
+          label="AI Core" 
+          active={activeView === 'neural'} 
+          onClick={() => setActiveView('neural')} 
         />
         <NavButton 
-          icon={<Bookmark size={22} />} 
-          label="Datos" 
+          icon={<Bookmark size={20} />} 
+          label="Saved" 
           active={activeView === 'saved'} 
           onClick={() => setActiveView('saved')} 
         />
         <NavButton 
-          icon={<User size={22} />} 
+          icon={<User size={20} />} 
           label="User" 
           active={activeView === 'profile'} 
           onClick={() => setActiveView('profile')} 
@@ -144,7 +144,7 @@ const NavButton: React.FC<NavButtonProps> = ({ icon, label, active, onClick, isL
     {isLiveTab && (
       <span className="absolute top-0 right-1/4 w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse border-2 border-black shadow-[0_0_8px_rgba(220,38,38,0.8)]"></span>
     )}
-    <span className={`text-[9px] font-black uppercase tracking-wider ${active ? 'opacity-100' : 'opacity-0'}`}>{label}</span>
+    <span className={`text-[8px] font-black uppercase tracking-wider ${active ? 'opacity-100' : 'opacity-0'}`}>{label}</span>
     {active && (
       <div className="absolute -bottom-2 w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_10px_cyan]"></div>
     )}
